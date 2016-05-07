@@ -1,6 +1,4 @@
 <resources>
     <string name="app_name">Sleep Timer</string>
-    <string name="title_activity_text">text</string>
-
     <string name="awaiting_playback">Pick a time to start the timer.</string>
 </resources>
