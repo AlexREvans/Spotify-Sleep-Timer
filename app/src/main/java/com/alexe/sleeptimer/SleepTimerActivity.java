@@ -1,22 +1,15 @@
 package com.alexe.sleeptimer;
 
-import android.app.Activity;
 import android.app.TimePickerDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.TimePicker;
-import android.widget.Toast;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -27,12 +20,11 @@ public class SleepTimerActivity extends AppCompatActivity {
     private TextView remainingText;
     private TimePicker timePicker;
     private FloatingActionButton fab;
+    private TimePickerDialog dialog;
+    private CountDownTimer timer;
 
     private final String REMAINING_TIME = "REMAINING TIME";
     private long remainingTime = 0;
-
-    private TimePickerDialog dialog;
-    private CountDownTimer timer;
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
@@ -68,16 +60,16 @@ public class SleepTimerActivity extends AppCompatActivity {
         }
     }
 
-    public void pickTime(View view) {
-        Date now = new Date();
-        dialog.setTitle(null);
-        dialog.show();
-    }
-
     @Override
     public void onPause() {
         super.onPause();
         dialog.dismiss();
+    }
+
+    public void pickTime(View view) {
+        Date now = new Date();
+        dialog.setTitle(null);
+        dialog.show();
     }
 
     public void toggleStart(View view) {
@@ -149,30 +141,14 @@ public class SleepTimerActivity extends AppCompatActivity {
             }
 
             public void onFinish() {
-
                 fab.setImageResource(android.R.drawable.ic_media_play);
                 remainingText.setText(R.string.awaiting_playback);
                 remainingTime = 0;
 
-                sendMediaButton(getApplicationContext(), KeyEvent.KEYCODE_MEDIA_PAUSE);
-
-                // Spotify doesn't respond to media buttons
                 Intent pauseSpotify = new Intent("com.spotify.mobile.android.ui.widget.PLAY");
                 pauseSpotify.setPackage("com.spotify.music");
                 sendBroadcast(pauseSpotify);
             }
         }.start();
-    }
-
-    private static void sendMediaButton(Context context, int keyCode) {
-        KeyEvent keyEvent = new KeyEvent(KeyEvent.ACTION_DOWN, keyCode);
-        Intent intent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-        intent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
-        context.sendOrderedBroadcast(intent, null);
-
-        keyEvent = new KeyEvent(KeyEvent.ACTION_UP, keyCode);
-        intent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-        intent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
-        context.sendOrderedBroadcast(intent, null);
     }
 }
