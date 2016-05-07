@@ -1,8 +1,12 @@
 package com.alexe.sleeptimer;
 
+import android.app.Activity;
+import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.CountDownTimer;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,24 +15,27 @@ import android.view.View;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 public class SleepTimerActivity extends AppCompatActivity {
 
-    private TextView timeRemaining;
-    private RadioGroup radios;
+    private TextView remainingText;
+    private TimePicker timePicker;
+    private FloatingActionButton fab;
 
     private final String REMAINING_TIME = "REMAINING TIME";
     private long remainingTime = 0;
 
+    private CountDownTimer timer;
+
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
-        // Save the user's current game state
         savedInstanceState.putLong(REMAINING_TIME, remainingTime);
-
-        // Always call the superclass so it can save the view hierarchy state
         super.onSaveInstanceState(savedInstanceState);
     }
 
@@ -37,58 +44,120 @@ public class SleepTimerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sleep_timer);
 
-        timeRemaining = (TextView) findViewById(R.id.countdown);
-        radios = (RadioGroup) findViewById(R.id.radios);
+        remainingText = (TextView) findViewById(R.id.countdown);
+
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            timePicker = (TimePicker) findViewById(R.id.timePicker);
+        }
+
+        fab = (FloatingActionButton) findViewById(R.id.fab);
+
+        dialog = new TimePickerDialog(this, new TimePickerDialog.OnTimeSetListener() {
+            @Override
+            public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                timePicker = view;
+                toggleStart(view);
+            }
+        }, 0,0, false);
 
 
-        if(savedInstanceState != null) {
+        if (savedInstanceState != null) {
             remainingTime = savedInstanceState.getLong(REMAINING_TIME);
-            startCountdown(remainingTime);
+
+            if (remainingTime > 0) {
+                startCountdown(remainingTime);
+            }
         }
     }
 
-    public void onRadioTimeClicked(View view) {
+    private TimePickerDialog dialog;
 
-        if (!((RadioButton) view).isChecked()) return;
+    public void pickTime(View view) {
+        Date now = new Date();
+        dialog.setTitle(null);
+        dialog.show();
+    }
 
-        long timeSeconds = 0;
+    @Override
+    public void onPause() {
+        super.onPause();
+        if(dialog.isShowing()) {
+            dialog.dismiss();
+        }
+    }
 
-        switch (view.getId()) {
-            case R.id.radioButton5m:
-                timeSeconds = 5 * 60;
-                break;
-            case R.id.radioButton10m:
-                timeSeconds = 10 * 60;
-                break;
-            case R.id.radioButton15m:
-                timeSeconds = 15 * 60;
-                break;
-            case R.id.radioButton30m:
-                timeSeconds = 30 * 60;
-                break;
+    public void toggleStart(View view) {
+        if (remainingTime == 0)
+            startClock();
+        else
+            endClock();
+    }
+
+    private void endClock() {
+        timer.cancel();
+
+        fab.setImageResource(android.R.drawable.ic_media_play);
+        remainingText.setText(R.string.awaiting_playback);
+        remainingTime = 0;
+    }
+
+    private void startClock() {
+
+        if (timePicker == null) {
+            return;
         }
 
-        startCountdown(timeSeconds * 1000);
+        int selectedHour = timePicker.getCurrentHour();
+        int selectedMin = timePicker.getCurrentMinute();
+        Date now = new Date();
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(now);
+
+        cal.set(Calendar.HOUR_OF_DAY, selectedHour);
+        cal.set(Calendar.MINUTE, selectedMin);
+
+        if (cal.getTime().getTime() < now.getTime()) {
+            cal.add(Calendar.DATE, 1);
+        }
+
+        Date target = cal.getTime();
+
+        long millisToTarget = target.getTime() - now.getTime();
+
+        startCountdown(millisToTarget);
     }
 
     private void startCountdown(long countdownMillis) {
-        new CountDownTimer(countdownMillis, 1000) {
+
+        fab.setImageResource(android.R.drawable.ic_media_pause);
+
+        timer = new CountDownTimer(countdownMillis, 1000) {
 
             public void onTick(long millisUntilFinished) {
 
-                String timer = String.format("Time remaining - %02d:%02d",
-                        TimeUnit.MILLISECONDS.toMinutes(millisUntilFinished),
-                        TimeUnit.MILLISECONDS.toSeconds(millisUntilFinished) -
-                        TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millisUntilFinished))
-                );
+                long millis = millisUntilFinished;
+
+                long hours = TimeUnit.MILLISECONDS.toHours(millis);
+                millis -= TimeUnit.HOURS.toMillis(hours);
+
+                long mins = TimeUnit.MILLISECONDS.toMinutes(millis);
+                millis -= TimeUnit.MINUTES.toMillis(mins);
+
+                long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+                millis -= TimeUnit.SECONDS.toMillis(seconds);
+
+
+                String timer = String.format("Time remaining - %02d:%02d:%02d", hours, mins, seconds);
 
                 remainingTime = millisUntilFinished;
-                timeRemaining.setText(timer);
+                remainingText.setText(timer);
             }
 
             public void onFinish() {
-                radios.clearCheck();
-                timeRemaining.setText("Done!");
+
+                fab.setImageResource(android.R.drawable.ic_media_play);
+                remainingText.setText(R.string.awaiting_playback);
                 remainingTime = 0;
 
                 sendMediaButton(getApplicationContext(), KeyEvent.KEYCODE_MEDIA_PAUSE);
@@ -97,8 +166,6 @@ public class SleepTimerActivity extends AppCompatActivity {
                 Intent pauseSpotify = new Intent("com.spotify.mobile.android.ui.widget.PLAY");
                 pauseSpotify.setPackage("com.spotify.music");
                 sendBroadcast(pauseSpotify);
-
-                finish();
             }
         }.start();
     }
