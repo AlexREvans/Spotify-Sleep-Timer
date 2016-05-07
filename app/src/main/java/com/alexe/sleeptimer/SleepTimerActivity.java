@@ -31,6 +31,7 @@ public class SleepTimerActivity extends AppCompatActivity {
     private final String REMAINING_TIME = "REMAINING TIME";
     private long remainingTime = 0;
 
+    private TimePickerDialog dialog;
     private CountDownTimer timer;
 
     @Override
@@ -45,21 +46,18 @@ public class SleepTimerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_sleep_timer);
 
         remainingText = (TextView) findViewById(R.id.countdown);
-
-        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-            timePicker = (TimePicker) findViewById(R.id.timePicker);
-        }
-
         fab = (FloatingActionButton) findViewById(R.id.fab);
-
         dialog = new TimePickerDialog(this, new TimePickerDialog.OnTimeSetListener() {
             @Override
             public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
                 timePicker = view;
                 toggleStart(view);
             }
-        }, 0,0, false);
+        }, 0, 0, false);
 
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            timePicker = (TimePicker) findViewById(R.id.timePicker);
+        }
 
         if (savedInstanceState != null) {
             remainingTime = savedInstanceState.getLong(REMAINING_TIME);
@@ -70,8 +68,6 @@ public class SleepTimerActivity extends AppCompatActivity {
         }
     }
 
-    private TimePickerDialog dialog;
-
     public void pickTime(View view) {
         Date now = new Date();
         dialog.setTitle(null);
@@ -81,9 +77,7 @@ public class SleepTimerActivity extends AppCompatActivity {
     @Override
     public void onPause() {
         super.onPause();
-        if(dialog.isShowing()) {
-            dialog.dismiss();
-        }
+        dialog.dismiss();
     }
 
     public void toggleStart(View view) {
